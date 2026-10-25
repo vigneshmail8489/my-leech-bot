@@ -3,6 +3,7 @@ import time
 import shutil
 import asyncio
 import nest_asyncio
+from aiohttp import web
 from pyrogram import Client, filters, idle
 from pyrogram.types import Message
 
@@ -38,6 +39,19 @@ ARIA2_TORRENT_FLAGS = (
     '--summary-interval=0'
 )
 
+# Render Web Service-க்கான Health Server
+async def handle_ping(request):
+    return web.Response(text="Bot is running smoothly 24/7!")
+
+async def start_web_server():
+    server = web.Application()
+    server.router.add_get("/", handle_ping)
+    runner = web.AppRunner(server)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
 async def upload_directory(client, chat_id, target_dir, status_msg):
     found_files = []
     for root, _, files in os.walk(target_dir):
@@ -54,7 +68,7 @@ async def upload_directory(client, chat_id, target_dir, status_msg):
         file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
         
         if file_size_mb > 2000:
-            await client.send_message(chat_id, f"⚠️ கோப்பு அளவு 2GB-க்கு மேல் உள்ளது ({file_size_mb:.2f} MB), டெலிகிராமில் அப்லோட் செய்ய முடியாது: `{file_name}`")
+            await client.send_message(chat_id, f"⚠️ கோப்பு அளவு 2GB-க்கு மேல் உள்ளது ({file_size_mb:.2f} MB): `{file_name}`")
             continue
 
         await status_msg.edit_text(f"📤 **அப்லோட் ஆகிறது...**\n`{file_name}` ({file_size_mb:.1f} MB)")
@@ -89,7 +103,7 @@ async def handle_url(client, message):
     task_dir = os.path.join(DOWNLOAD_DIR, session_id)
     os.makedirs(task_dir, exist_ok=True)
 
-    status_msg = await message.reply_text("🚀 **கிளவுட் சர்வரில் பதிவிறக்கம் தொடங்குகிறது...**")
+    status_msg = await message.reply_text("🚀 **பதிவிறக்கம் தொடங்குகிறது...**")
 
     cmd = f'aria2c --dir="{task_dir}" {ARIA2_TORRENT_FLAGS} "{link}"'
     proc = await asyncio.create_subprocess_shell(cmd)
@@ -131,8 +145,10 @@ async def handle_torrent_doc(client, message):
     shutil.rmtree(task_dir, ignore_errors=True)
 
 async def main():
+    await start_web_server()
     await app.start()
-    print("✅ Koyeb Cloud-ல் பாட் வெற்றிகரமாகத் தொடங்கிவிட்டது!")
+    print("✅ Render Cloud-ல் பாட் வெற்றிகரமாக Live ஆகிவிட்டது!")
     await idle()
 
 asyncio.run(main())
+    
