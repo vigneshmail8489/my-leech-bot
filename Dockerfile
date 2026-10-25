@@ -12,4 +12,6 @@ RUN pip3 install --no-cache-dir kurigram tgcrypto aiohttp nest_asyncio
 
 COPY . /app
 
+EXPOSE 8080
+
 CMD ["python3", "bot.py"]
